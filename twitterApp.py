@@ -5,7 +5,9 @@ from tweepy import Stream
 import json
 
 import configparser
-from confluent_kafka import Producer
+
+from kafka import KafkaProducer
+
 
 config = configparser.ConfigParser()
 config.read('twitter.ini')
@@ -15,7 +17,7 @@ consumer_secret = config['twitter']['consumer_secret']
 access_token = config['twitter']['access_token']
 access_token_secret = config['twitter']['access_token_secret']
 
-p = Producer({'bootstrap.servers': 'localhost:9092'})
+p = KafkaProducer(bootstrap_servers=['localhost:9093'],value_serializer=lambda v: json.dumps(v).encode('utf-8'))
         
 #setup_twitter_oauth(api_key,api_secret,access_token,access_token_secret)
 
@@ -35,7 +37,7 @@ class StdOutListener(StreamListener):
 class KafkaListener(StreamListener):
 
     def on_data(self, data):
-        p.produce('tweets', data)        
+        p.send('tweets', data)        
         return True
 
     def on_error(self, status):
@@ -46,9 +48,10 @@ if __name__ == '__main__':
 
     #This handles Twitter authetification and the connection to Twitter Streaming API
     l = StdOutListener()
+    k = KafkaListener()
     auth = OAuthHandler(consumer_key, consumer_secret)
     auth.set_access_token(access_token, access_token_secret)
-    stream = Stream(auth, l)
+    stream = Stream(auth, k)
 
     #This line filter Twitter Streams to capture data by the keywords: 'python', 'javascript', 'ruby'
     stream.filter(track=['python', 'javascript', 'ruby'])
