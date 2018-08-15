@@ -3,10 +3,10 @@ from tweepy import OAuthHandler
 from tweepy import Stream
 
 import json
-import pandas as pd
-import matplotlib.pyplot as plt
 
 import configparser
+from confluent_kafka import Producer
+
 config = configparser.ConfigParser()
 config.read('twitter.ini')
 
@@ -15,8 +15,8 @@ consumer_secret = config['twitter']['consumer_secret']
 access_token = config['twitter']['access_token']
 access_token_secret = config['twitter']['access_token_secret']
 
-
-
+p = Producer({'bootstrap.servers': 'localhost:9092'})
+        
 #setup_twitter_oauth(api_key,api_secret,access_token,access_token_secret)
 
 #positive=scan('positive-words.txt',what='character',comment.char=';')
@@ -27,6 +27,15 @@ class StdOutListener(StreamListener):
 
     def on_data(self, data):
         print(data)
+        return True
+
+    def on_error(self, status):
+        print(status)
+
+class KafkaListener(StreamListener):
+
+    def on_data(self, data):
+        p.produce('tweets', data)        
         return True
 
     def on_error(self, status):
